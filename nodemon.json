@@ -1,0 +1,10 @@
+{
+	"env": {
+		"PORT":5000,
+		"TWL_SID":"AC2deffb9655d346d5d779637eb555d5a3",
+		"TWL_AUTH_TOKEN": "27018b815dbc86ebcb04878ad3404d8a",
+		"JWT_SECRET":"top_secret-1653hack",
+		"MONGO_URL":"mongodb://127.0.0.1:27017/hack",
+		"TWL_AUTH_SERVICE_ID": "VAc199440939388c7eb0d6d9387e5fd657"
+	}
+}
