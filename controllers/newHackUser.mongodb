@@ -1,0 +1,15 @@
+use('hack')
+db.users.insertOne({
+  status: "Hi, I'm new here",
+  is_active: true,
+  dateJoined: {
+    $date: "2021-10-01T09:17:33.781Z"
+  },
+  contacts: [],
+  profileImage: "/profile_images/default.png",
+  phone: "+2348074022770",
+  deviceId: "ExponentPushToken[Fexf36FqNvcQx1urDVbHR2]",
+  tokenVerify: null,
+  tokenVerifyDate: null,
+  __v: 0
+})
