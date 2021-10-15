@@ -20,19 +20,15 @@ const MessageSchema = new Schema({
 		type: Boolean,
 		default: false
 	},
-	mediaType: {
-		type: String
-	},
-	mediaUrl: {
-		type: String
-	},
-	mediaThumnailUrl:{
-		type: String
-	},
 	parent: {
 		type: mongoose.Types.ObjectId,
 		ref: "Message"
-	}
+	},
+	media: {
+		type: mongoose.Types.ObjectId,
+		ref: "Media",
+		required: false
+	},
 }, {timestamps: true})
 
 const Message = mongoose.model("Message", MessageSchema)

@@ -7,6 +7,27 @@ const { throwNewError } = require("../utils/easyfunctions");
 
 const client = require('twilio')(process.env.TWL_SID, process.env.TWL_AUTH_TOKEN);
 
+exports.checkNumber = async (req, res, next) => {
+	const { countryCode, phoneNumber } = req.body
+	try {
+		const errors = validationResult(req)
+		if (!errors.isEmpty()) {
+			throwNewError("Validation Failed", 400, errors.array())
+		}
+		const phoneNumberDetails = await client.lookups.phoneNumbers(countryCode + phoneNumber).fetch()
+		if (!phoneNumberDetails) {
+			throwNewError("Invalid Phone Number", 400, [])
+		}
+		const formattedPhoneString = countryCode + " " + phoneNumberDetails.nationalFormat.substring(1)
+		res.status(200).json({ nationalFormat: phoneNumberDetails.nationalFormat, phoneNumber: phoneNumberDetails.phoneNumber, formattedPhoneString })
+	} catch (error) {
+		if(!error.status){
+			error.status = 500
+		}
+		next(error)
+	}
+}
+
 exports.authenticate = async (req, res, next) => {
 	const { phone, channel, deviceId } = req.body;
 	try {
@@ -117,11 +138,11 @@ exports.refreshToken = async (req, res, next) => {
 		const userData = { _id: user._id, phone: user.phone, firstName: user.firstName, lastName: user.lastName, email: user.email, status: user.status }
 		const tokenGen = new TokenGen(process.env.JWT_SECRET, process.env.JWT_SECRET, { expiresIn: "6h" })
 		const accessToken = tokenGen.sign({ user: userData })
-			setTimeout(function () {
-				const refreshToken = tokenGen.refresh(accessToken, {})
-				// res.status(200).json({ token: accessToken, refresh: refreshToken, user: userData })
-				res.status(200).json({token: accessToken, refresh: refreshToken})
-			}, 2000)
+		setTimeout(function () {
+			const refreshToken = tokenGen.refresh(accessToken, {})
+			// res.status(200).json({ token: accessToken, refresh: refreshToken, user: userData })
+			res.status(200).json({ token: accessToken, refresh: refreshToken })
+		}, 2000)
 
 
 	} catch (error) {
@@ -135,31 +156,50 @@ exports.syncContacts = async (req, res, next) => {
 	const { contacts } = req.body
 	try {
 		const errors = validationResult(req)
-		if(!errors.isEmpty()){
+		if (!errors.isEmpty()) {
 			throw throwNewError("Validation failed!", 400, errors.array())
 		}
 		let verifiedContact = [];
-		for(const con of contacts){
+		for (const con of contacts) {
 			const regex = new RegExp(con.phoneNumber, 'i')
-			const user = await User.findOne({phone: {$regex: regex, $ne: req.user.phone}})
-			if(user){
-				verifiedContact.push({firstName: user.firstName, lastName: user.lastName, phone: user.phone, image:user.profileImage, status: user.status, contactSystemId: con.id, aliasName: con.name, userId: user._id})
+			const user = await User.findOne({ phone: { $regex: regex, $ne: req.user.phone } })
+			if (user) {
+				verifiedContact.push({ firstName: user.firstName, lastName: user.lastName, phone: user.phone, image: user.profileImage, status: user.status, contactSystemId: con.id, aliasName: con.name, userId: user._id })
 			}
 		}
 
-		if(verifiedContact.length > 0){
-			for(const con of verifiedContact){
+		if (verifiedContact.length > 0) {
+			for (const con of verifiedContact) {
 				const contactExists = req.user.contacts.find(conta => conta.user._id.toString() === con.userId.toString())
-				if(!contactExists){
-					req.user.contacts.push({user: con.userId, contactAliasName: con.aliasName})
+				if (!contactExists) {
+					req.user.contacts.push({ user: con.userId, contactAliasName: con.aliasName })
 				}
 			}
 			await req.user.save()
 		}
-		res.status(200).json({contacts: verifiedContact, currentContact: req.user.contacts})
+		res.status(200).json({ contacts: verifiedContact, currentContact: req.user.contacts })
 	} catch (error) {
-		if(!error.status){
+		if (!error.status) {
 			error.status = 500
+		}
+		next(error)
+	}
+}
+
+exports.getProfile = async (req, res, next) => {
+	const phoneNumber = req.params.phoneNumber
+	if(!phoneNumber){
+		throw throwNewError("User phone number not provided", 400, [])
+	}
+	try{
+		const user = await User.findOne({ phone: phoneNumber })
+		if(!user){
+			throw throwNewError("User profile does not exists!", 404, [])
+		}
+		res.status(200).json({ phone: user.phone, firstName: user.firstName, status: user.status, profileImage: user.profileImage, lastSeen: user.lastName })
+	}catch(error){
+		if(!error.status){
+			error.status=500
 		}
 		next(error)
 	}
